@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <link rel ="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    <title>最大正方形の面積探索</title>
+    <style>
+/*
+    Josh's Custom CSS Reset
+    https://www.joshwcomeau.com/css/custom-css-reset/
+*/
+*,*::before,*::after{box-sizing:border-box}*{margin:0}html,body{height:100%}body{line-height:1.5;-webkit-font-smoothing:antialiased}img,picture,video,canvas,svg{display:block;max-width:100%}input,button,textarea,select{font:inherit}p,h1,h2,h3,h4,h5,h6{overflow-wrap:break-word}#root,#__next{isolation:isolate}
+
+        body {
+            background-color: #fafafa;
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            display: block;
+        }
+
+        .content {
+            border: 1em;
+            padding: 30px;
+            position: relative;
+        }
+
+        .content * {
+            border-spacing: 0.05em;
+        }
+
+        h1 {
+            font-size: 1.2em;
+            margin: 0px 0px 10px 0px;
+        }
+        h2 {
+            font-size: 1em;
+            margin: 0px 0px 10px 0px;
+        }
+        hr{
+            margin:10px 0px;
+        }
+
+        .cell{
+            border-style: solid;
+            border-width: 0.1em;
+            width: 30px;
+            border-radius: 30%;
+            border-color: gray;
+            position: relative;
+            color: whitesmoke;
+            
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            
+        }
+        .cell::before{
+            padding-top: 100%;
+            content: '';
+            display:block;
+        }
+        
+        .passed{
+            background: lightgreen;
+            color: ghostwhite;
+        }
+        .preliminary{
+            background: lightskyblue;
+        }
+        .check{
+            background: lightseagreen;
+        }
+        .board .cell:hover {
+            animation-delay: 0s;
+            animation: 0.5s infinite;
+            animation-name: flashing;
+        }
+        @keyframes flashing {
+            50% {
+                border-color: yellow;
+                background: orange;
+            }
+        }
+
+        .wall{
+            background: orangered;
+            color: whitesmoke;
+        }
+        .now{
+            background: green;
+            background-blend-mode: difference;
+        }
+        .xmark, .area-dp{
+            position: absolute;
+            top:50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+        }
+        .area-dp{
+            color: lightsteelblue;
+        }
+        .passed .area-dp{
+            color: ghostwhite;
+        }
+        .max .area-dp{
+            display: inline-block;
+            background: linear-gradient(135deg, lightyellow 0%,lightpink 100%);
+            background: -webkit-linear-gradient(-45deg, lightyellow 0%, lightpink 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        a.button {
+            position: relative;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            padding: 0 10px;
+            border-bottom: 3px solid #00662d;
+            background-color: #00a349;            
+            color: #00662d;
+            text-shadow: -1px -1px 1px #00ff71;
+            -webkit-transition: all 0.3s;
+            transition: all 0.3s;
+            -webkit-box-shadow: 0 2px 4px rgba(0, 0, 0, .3);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, .3);
+            
+        }
+        a.button:hover {
+            margin-top: 3px;
+            background: #00a349;
+            border-bottom: 1px solid #00662d;
+            -webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+        }
+        .input-table{
+            border-spacing: 3px 0px;
+        }
+
+        .input-range[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: lightgreen;
+            height: 5px;            
+            border-radius: 6px;
+        }
+        .input-range[type="range"]:focus,
+        .input-range[type="range"]:active {
+            outline: none;
+        }
+        .input-range[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+            position: relative;
+            border: 2px solid rgba(76, 228, 139, 0.7);
+            width: 22px;
+            height: 22px;
+            display: block;
+            background-color: #fff;
+            border-radius: 50%;
+            -webkit-border-radius: 50%;
+        }
+        .input-range[type="range"]:active::-webkit-slider-thumb {
+            box-shadow: 0 0 0 4px rgba(123, 218, 163, 0.6);
+            transition: .4s;
+        }
+        .wrap{
+            display:flex;
+            gap: 0px 20px;
+        }
+        #max-Area{
+            font-size: 2em;
+        }
+        @media only screen and (max-width: 700px) {
+            .cell {
+                font-size: .9em;
+            }
+        }
+        @media only screen and (max-width: 500px) {
+            .cell {
+                font-size: .85em;
+            }
+            .xmark {
+                font-size: .75em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <h1>正方形の面積探索ビジュアライザ</h1>
+        <h2>インプット</h2>
+        <div>
+            <table class="input-table">
+                <tr>
+                    <td>
+                        <label for="range-H">縦</label>
+                    </td>
+                    <td></td>
+                    <td>
+                        <input type="range" class="input-range" id="range-H" min="1" max="20" step="1" value="6">
+                        <span id="H">6</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="range-W">横</label></td>
+                    <td></td>
+                    <td>
+                        <input type="range" class="input-range" id="range-W" min="1" max="20" step="1" value="10">
+                        <span id="W">10</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="range-Step">STEP</label>
+                    </td>
+                    <td>
+                        <a id="btn-Play" tabindex="-1" class="play disabled button"><i id="btn-Play-Icon" class="fa fa-stop fa-fw"></i></a>
+                    </td>
+                    <td>
+                        <input type="range" class="input-range" id="range-Step" min="1" max="60" step="1" value="1">
+                        <span id="Step">1</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="range-Shuffle">SHUFFLE</label>
+                    </td>
+                    <td>
+                        <a id="btn-Shuffle" tabindex="-1" class="shuffle disabled button"><i class="fa fa-shuffle fa-fw"></i></a>
+                    </td>
+                    <td>
+                        <input type="range" class="input-range" id="range-Shuffle" min="0" max="100" step="1" value="8">
+                        <span id="Shuffle">8</span><span>%</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <hr>
+        <h2>正方形の最大面積</h2>
+        <div>
+            <p id="max-Area">000</p>
+        </div>
+        <hr>
+        <h2>貰うDP</h2>
+        <div>
+            <table class="board" id="get-board"></table>
+        </div>
+        <hr>
+        <h2>配るDP</h2>
+        <div>
+            <table class="board" id="deliver-borad"></table>
+        </div>
+
+    <script>
+        let elemH = document.getElementById('range-H');
+        let targetH = document.getElementById('H');
+        let elemW = document.getElementById('range-W');
+        let targetW = document.getElementById('W');
+        let elemStep = document.getElementById('range-Step');
+        let targetStep = document.getElementById('Step');
+        let elemShuffle = document.getElementById('range-Shuffle');
+        let targetShuffle = document.getElementById('Shuffle');
+        let getBoard = document.getElementById("get-board");
+        let deliverBorad= document.getElementById("deliver-borad");
+        let btnPlay = document.getElementById("btn-Play");
+        let btnPlayIcon = document.getElementById("btn-Play-Icon");
+        let btnShuffle = document.getElementById("btn-Shuffle");
+        let maxArea = document.getElementById("max-Area");
+
+        let isStepRihtEnd = false;
+        let isStepLowerEnd = false;
+        let stepHIndex = 0;
+        let stepWIndex = 0;
+
+        const innerH = 20;
+        const innerW = 20;
+        let map = (new Array(innerH*innerW)).fill(0);
+
+        if(Math.min(screen.width,screen.height)<=700){
+            elemH.max = 12
+            elemW.max = 12
+        }
+
+        let setRangeValue = function (elem, target) {
+            return function(evt){
+                target.innerHTML = elem.value;
+            }
+        }
+        let setStepHWRangeChange = function () {      
+            elemStep.max=elemH.value*elemW.value
+            if(stepHIndex>=elemH.value-1){
+                isStepLowerEnd = true;
+            }
+            if(stepWIndex>=elemW.value-1){
+                isStepRihtEnd = true;
+            }
+            if(isStepLowerEnd){
+                stepHIndex=elemH.value-1;
+            }
+            if(isStepRihtEnd){
+                stepWIndex=elemW.value-1;
+            }
+            elemStep.value =  getStep(stepHIndex, stepWIndex)+1
+            targetStep.innerHTML = elemStep.value
+
+            let newMap = (new Array(innerH*innerW)).fill(0);
+            for (let i = 0; i < targetH.textContent; i++) {
+                for (let j = 0; j < targetW.textContent; j++) {
+                    if(map[getInner1Dindex(i,j)]){
+                        newMap[getInner1Dindex(i,j)]=1;
+                    }
+                }
+            }
+            map = newMap;
+        }
+        let setStepStepRangeChange = function () {
+            targetStep.innerHTML = elemStep.value
+            stepHIndex = Math.floor((elemStep.value-1)/elemW.value),
+            stepWIndex = (elemStep.value-1)%elemW.value
+            isStepRihtEnd = stepHIndex+1==elemH.value
+            isStepLowerEnd = stepWIndex+1==elemW.value
+        }
+
+        function  getStep(h, w) {
+            return h*elemW.value+w;
+        }
+        function  getStepToInnerIndex(step) {
+            return getInner1Dindex(Math.floor(step/elemW.value),step%elemW.value);
+        }
+        function  getInner1Dindex(hIndex, wIndex) {
+            return hIndex*innerW+wIndex
+        }
+        function getInner2Dindex(innerIndex) {
+            return {
+                hIndex: Math.ceil(innerIndex/innerW),
+                wIndex: innerIndex%innerW
+            };
+        }
+        let reverseOnOff = function(innerIndex,elemTd){
+            return function(evt){
+                map[innerIndex]^=1;
+                createBoard();
+            }
+        }
+
+        function playStep(){
+            setInterval(() => {
+                if(btnPlayIcon.classList.contains("fa-stop") && Number(elemStep.value)<Number(elemStep.max)){              
+                    stepWIndex += 1
+                    if(stepWIndex>=elemW.value){
+                        stepWIndex = 0
+                        stepHIndex += 1
+                    }
+                    elemStep.value =  getStep(stepHIndex, stepWIndex)+1
+                    targetStep.innerHTML = elemStep.value
+                    createBoard();
+                }
+                if(btnPlayIcon.classList.contains("fa-stop") && Number(elemStep.value)==Number(elemStep.max)){              
+                    btnPlayIcon.classList.remove("fa-stop");
+                    btnPlayIcon.classList.add("fa-play");
+                }
+
+            }, 500);
+        }
+
+
+        function togglePlayStop(innerIndex) {
+            if(elemStep.value==elemStep.max){
+                targetStep.innerHTML = 1
+                elemStep.value = 1
+                stepHIndex = 0
+                stepWIndex = 0
+                isStepRihtEnd = false
+                isStepLowerEnd = false
+                btnPlayIcon.classList.remove("fa-play");
+                btnPlayIcon.classList.add("fa-stop");
+            }
+            else{
+                btnPlayIcon.classList.toggle("fa-play");
+                btnPlayIcon.classList.toggle("fa-stop");
+            }
+            createBoard();
+        }
+
+        function shuffleWall() {
+            map = (new Array(innerH*innerW)).fill(0);
+            probability = elemShuffle.value/100;
+            for (let i = 0; i < targetH.textContent; i++) {
+                for (let j = 0; j < targetW.textContent; j++) {
+                    if(probability>Math.random()){
+                        map[getInner1Dindex(i,j)]=1
+                    }
+                }
+            }
+            createBoard();
+        }
+
+        let createBoard = function (){
+
+            let maxSide = 0;
+            let maxSideHIndex = 0;
+            let maxSideWIndex = 0;
+
+            const getDp = new Array(elemH.value);
+            for (let i = 0; i < targetH.textContent; i++) {
+                getDp[i] = new Array(Number(elemW.value)).fill(-1);
+            }
+            for (let i = 0; i < elemH.value; i++) {
+                for (let j = 0; j < elemW.value; j++) {
+                    if(stepHIndex > i || (stepHIndex==i &&stepWIndex>=j)){
+                        if(map[getInner1Dindex(i,j)]==0){
+                            if(i==0||j==0){
+                                getDp[i][j]=1;
+                            }
+                            else{
+                                getDp[i][j]=Math.min(getDp[i-1][j],getDp[i][j-1],getDp[i-1][j-1])+1
+                            }
+                        }
+                        else{
+                            getDp[i][j]=0;
+                        }
+                        if(maxSide<getDp[i][j]){
+                            maxSide = getDp[i][j];
+                            maxSideHIndex=i;
+                            maxSideWIndex=j;
+                        }
+                    }
+                }
+            }
+            let deliveryDp = new Array(elemH.value);
+            for(let i = 0; i < elemH.value; i++) {
+                deliveryDp[i] = new Array(Number(elemW.value)).fill(99);
+            }
+            for (let i = 0; i < elemH.value; i++) {
+                for (let j = 0; j < elemW.value; j++) {
+                    if(stepHIndex > i || (stepHIndex==i &&stepWIndex>=j)){
+                        if(map[getInner1Dindex(i,j)]==0){
+                            if(i==0||j==0){
+                                deliveryDp[i][j]=1;
+                            }
+                        }
+                        else{
+                            deliveryDp[i][j]=0;
+                        }
+                        if(i<elemH.value-1){
+                            deliveryDp[i+1][j]=Math.min(deliveryDp[i+1][j],deliveryDp[i][j]+1);
+                        }
+                        if(j<elemW.value-1){
+                            deliveryDp[i][j+1]=Math.min(deliveryDp[i][j+1],deliveryDp[i][j]+1);
+                        }
+                        if(i<elemH.value-1&&j<elemW.value-1){
+                            deliveryDp[i+1][j+1]=Math.min(deliveryDp[i+1][j+1],deliveryDp[i][j]+1);
+                        }
+                    }
+                }
+            }
+
+            while(getBoard.firstChild){
+                getBoard.removeChild(getBoard.firstChild);                
+            }
+            for (let i = 0; i < targetH.textContent; i++) {
+                const tr = document.createElement("tr");
+                for (let j = 0; j < targetW.textContent; j++) {
+                    const td = document.createElement("td");
+                    td.className = "cell";
+                    td.addEventListener('mousedown', reverseOnOff(getInner1Dindex(i,j),td));
+
+                    if(map[getInner1Dindex(i,j)]==0){
+                        td.innerHTML = "<span class=\"area-dp\">" + String(getDp[i][j]) + "</span>";
+                        if(stepHIndex>i|| (stepHIndex==i && stepWIndex>=j)){
+                            td.classList.add("passed");
+                        }
+                    }else{
+                        td.classList.add("wall");
+                        td.innerHTML = "<i class=\"fa fa-regular fa-rectangle-xmark xmark\"></i>";
+                    }
+                    if(maxSideHIndex-maxSide<i&&i<=maxSideHIndex&&maxSideWIndex-maxSide<j&&j<=maxSideWIndex){
+                        td.classList.add("preliminary");
+                    }
+                    if(maxSideHIndex==i&&maxSideWIndex==j){
+                        td.classList.add("max");
+                    }
+                    if(stepHIndex>0 && stepWIndex>0){
+                        if(stepHIndex-1==i&&stepWIndex==j){
+                            td.classList.add("check");
+                        }
+                        if(stepHIndex==i&&stepWIndex-1==j){
+                            td.classList.add("check");
+                        }
+                        if(stepHIndex-1==i&&stepWIndex-1==j){
+                            td.classList.add("check");
+                        }
+                    }
+
+                    if(stepHIndex==i&&stepWIndex==j){
+                        td.classList.add("now");
+                    }
+                    tr.appendChild(td);                    
+                }
+                getBoard.appendChild(tr);
+            }
+
+            while(deliverBorad.firstChild){
+                deliverBorad.removeChild(deliverBorad.firstChild);                
+            }
+
+            for (let i = 0; i < targetH.textContent; i++) {
+                const tr = document.createElement("tr");
+                for (let j = 0; j < targetW.textContent; j++) {
+                    const td = document.createElement("td");
+                    td.className = "cell";
+                    td.addEventListener('mousedown', reverseOnOff(getInner1Dindex(i,j),td));
+
+                    if(map[getInner1Dindex(i,j)]==0){
+                        td.innerHTML = "<span class=\"area-dp\">"+String(deliveryDp[i][j])+"</span>";
+                        if(stepHIndex>i|| (stepHIndex==i && stepWIndex>=j)){
+                            td.classList.add("passed");
+                        }
+                        if(maxSideHIndex-maxSide<i&&i<=maxSideHIndex&&maxSideWIndex-maxSide<j&&j<=maxSideWIndex){
+                            td.classList.add("preliminary");
+                        }
+                    }else{
+                        td.classList.add("wall");
+                        td.innerHTML = "<i class=\"fa fa-regular fa-rectangle-xmark xmark\"></i>";
+                    }
+
+                    if(maxSideHIndex==i&&maxSideWIndex==j){
+                        td.classList.add("max");
+                    }
+                    if(stepHIndex+1==i&&stepWIndex==j){
+                        td.classList.add("check");
+                    }
+                    if(stepHIndex==i&&stepWIndex+1==j){
+                        td.classList.add("check");
+                    }
+                    if(stepHIndex+1==i&&stepWIndex+1==j){
+                        td.classList.add("check");
+                    }
+
+                    if(stepHIndex==i&&stepWIndex==j){
+                        td.classList.add("now");
+                    }
+                    tr.appendChild(td);                    
+                }
+                deliverBorad.appendChild(tr);
+            }
+
+            let max = maxSide**2
+            maxArea.innerHTML = ('00'+maxSide).slice(-2)+'×'+('00'+maxSide).slice(-2)+'&nbsp;=&nbsp;'+('000'+max).slice(-3);
+        }
+
+        elemH.addEventListener('input', setRangeValue(elemH, targetH));
+        elemW.addEventListener('input', setRangeValue(elemW, targetW));
+        elemShuffle.addEventListener('input', setRangeValue(elemShuffle, targetShuffle));
+        
+        elemH.addEventListener('input', setStepHWRangeChange);
+        elemW.addEventListener('input', setStepHWRangeChange);
+        elemStep.addEventListener('input', setStepStepRangeChange);
+
+        elemH.addEventListener('input', createBoard);
+        elemW.addEventListener('input', createBoard);
+        
+        btnPlay.addEventListener('click', togglePlayStop);
+        elemStep.addEventListener('input', createBoard);
+        btnShuffle.addEventListener('click',shuffleWall);
+
+        document.addEventListener("DOMContentLoaded", shuffleWall);
+        document.addEventListener("DOMContentLoaded", playStep);
+
+    </script>
+</body>
+</html>
